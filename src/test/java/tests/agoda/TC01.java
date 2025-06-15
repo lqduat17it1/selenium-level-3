@@ -27,7 +27,7 @@ public class TC01 extends BaseTest {
 
     @Test(description = "Search and sort hotel successfully")
     public void searchAndSortHotelSuccessfully() {
-        open(Configuration.baseUrl);
+        open("/");
 
         HotelSearchRequest hotelSearchRequest = HotelSearchRequest.builder()
                 .stayType(StayType.OVERNIGHT)

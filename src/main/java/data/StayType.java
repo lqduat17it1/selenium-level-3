@@ -1,15 +1,14 @@
 package data;
 
-public enum StayType {
-    OVERNIGHT("Overnight Stays"),
-    DAY_USE("Day Use Stays");
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 
-    private final String text;
-    StayType(String text) {
-        this.text = text;
-    }
-    
-    public String getText() {
-        return text;
-    }
+@Getter
+@AllArgsConstructor
+public enum StayType {
+    OVERNIGHT("funnel-switcher", 0),
+    DAY_USE("funnel-switcher", 1);
+
+    private final String dataElementName;
+    private final int dataHhBookingDurationType;
 }

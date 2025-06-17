@@ -1,7 +1,5 @@
 package tests.agoda;
 
-import com.codeborne.selenide.Configuration;
-import data.SortBy;
 import data.StayType;
 import models.HotelSearchRequest;
 import org.testng.annotations.BeforeMethod;
@@ -11,25 +9,18 @@ import pages.agoda.SearchResultPage;
 import tests.BaseTest;
 import utils.DateTimeUtils;
 
-import static com.codeborne.selenide.Selenide.*;
-import static com.codeborne.selenide.Condition.*;
-
 public class TC01 extends BaseTest {
 
     HomePage homePage;
     SearchResultPage searchResultPage;
+    HotelSearchRequest hotelSearchRequest;
 
     @BeforeMethod
     public void setUp() {
         homePage = new HomePage();
         searchResultPage = new SearchResultPage();
-    }
 
-    @Test(description = "Search and sort hotel successfully")
-    public void searchAndSortHotelSuccessfully() {
-        open("/");
-
-        HotelSearchRequest hotelSearchRequest = HotelSearchRequest.builder()
+        hotelSearchRequest = HotelSearchRequest.builder()
                 .stayType(StayType.OVERNIGHT)
                 .destination("Da Nang")
                 .checkInDate(DateTimeUtils.getNextFriday())
@@ -37,13 +28,15 @@ public class TC01 extends BaseTest {
                 .numberOfRooms(2)
                 .numberOfAdults(4)
                 .build();
+    }
 
+    @Test(description = "Search and sort hotel successfully")
+    public void searchAndSortHotelSuccessfully() {
         homePage.search(hotelSearchRequest);
         searchResultPage.checkResultDestination(hotelSearchRequest.getDestination());
 
-        searchResultPage.sortResult(SortBy.LOWEST_PRICE_FIRST);
+        searchResultPage.sortByLowestPrice();
         searchResultPage.checkResultSortByLowestPrice();
         searchResultPage.checkResultDestination(hotelSearchRequest.getDestination());
-
     }
 }

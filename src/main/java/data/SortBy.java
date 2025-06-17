@@ -1,5 +1,10 @@
 package data;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+
+@Getter
+@AllArgsConstructor
 public enum SortBy {
     BEST_MATCH("search-sort-recommended"),
     LOWEST_PRICE_FIRST("search-sort-price"),
@@ -8,12 +13,4 @@ public enum SortBy {
     HOT_DEALS("search-sort-secret-deals");
 
     private final String dataElementName;
-
-    SortBy(String dataElementName) {
-        this.dataElementName = dataElementName;
-    }
-
-    public String getDataElementName() {
-        return dataElementName;
-    }
 }

@@ -5,6 +5,7 @@ import data.OccupancyType;
 import data.StayType;
 import models.HotelSearchRequest;
 import pages.BasePage;
+import io.qameta.allure.Step;
 import java.time.LocalDate;
 
 import static com.codeborne.selenide.Condition.*;
@@ -49,6 +50,7 @@ public class HomePage extends BasePage {
      * @param request the hotel search request containing all search parameters
      * @return SearchResultPage instance representing the results page
      */
+    @Step("Search for hotels with specified parameters")
     public SearchResultPage search(HotelSearchRequest request) {
         selectStayType(request.getStayType());
         fillDestination(request.getDestination());
@@ -59,6 +61,7 @@ public class HomePage extends BasePage {
         return page(SearchResultPage.class);
     }
 
+    @Step("Fill destination with value: {destination}")
     private void fillDestination(String destination) {
         destinationInput
             .shouldBe(visible)
@@ -66,44 +69,52 @@ public class HomePage extends BasePage {
         selectFirstSuggestion();
     }
 
+    @Step("Select first suggestion from autocomplete")
     private void selectFirstSuggestion() {
         selectResult(0);
     }
 
+    @Step("Select check-in date: {checkIn} and check-out date: {checkOut}")
     private void selectDates(LocalDate checkIn, LocalDate checkOut) {
         selectDate(checkIn);
         selectDate(checkOut);
     }
 
+    @Step("Set occupancy parameters: rooms={request.numberOfRooms}, adults={request.numberOfAdults}, children={request.numberOfChildren}")
     private void setOccupancy(HotelSearchRequest request) {
         selectOccupancy(OccupancyType.ROOMS, request.getNumberOfRooms());
         selectOccupancy(OccupancyType.ADULTS, request.getNumberOfAdults());
         selectOccupancy(OccupancyType.CHILDREN, request.getNumberOfChildren());
     }
 
+    @Step("Submit search and switch to results window")
     private void submitSearch() {
         searchButton.shouldBe(enabled).click();
         switchTo().window(1);
     }
 
+    @Step("Select stay type: {stayType}")
     private void selectStayType(StayType stayType) {
         getStayTypeElement(stayType)
             .shouldBe(visible)
             .click();
     }
 
+    @Step("Select autocomplete result at index: {index}")
     private void selectResult(int index) {
         getAutoCompleteResult(index)
             .shouldBe(visible)
             .click();
     }
 
+    @Step("Select date: {date}")
     private void selectDate(LocalDate date) {
         getDateElement(date)
             .shouldBe(visible)
             .click();
     }
 
+    @Step("Set {type} occupancy to {value}")
     private void selectOccupancy(OccupancyType type, int value) {
         if (value <= 0) return;
 

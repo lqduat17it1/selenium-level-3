@@ -2,38 +2,40 @@ package pages.agoda;
 
 import common.Constants;
 import data.SortBy;
+import utils.AssertionUtils;
+import io.qameta.allure.Step;
 
 import static com.codeborne.selenide.Selenide.*;
 import static com.codeborne.selenide.Condition.*;
 import com.codeborne.selenide.CollectionCondition;
 import com.codeborne.selenide.ElementsCollection;
 import com.codeborne.selenide.SelenideElement;
+import com.codeborne.selenide.SelenideWait;
+import com.codeborne.selenide.WebDriverRunner;
 import driver.DriverUtils;
+import lombok.Getter;
 import pages.BasePage;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
+@Getter
 public class SearchResultPage extends BasePage {
     private static final int MIN_REQUIRED_ELEMENTS = 5;
+
+    private final ElementsCollection priceElements = $$("li[data-selenium='hotel-item'] div[data-element-name='final-price'] span:last-child");
+    private final ElementsCollection destinationElements = $$("div[data-selenium='area-city'] span");
 
     private SelenideElement getSortButton(SortBy sortBy) {
         return $x(String.format("//button[@data-element-name='%s']", sortBy.getDataElementName()));
     }
 
-    private ElementsCollection getPriceElements() {
-        return $$("li[data-selenium='hotel-item'] div[data-element-name='final-price'] span:last-child");
-    }
-
-    private ElementsCollection getDestinationElements() {
-        return $$("div[data-selenium='area-city'] span");
-    }
-
+    @Step("Click sort button to sort results by lowest price")
     public void sortByLowestPrice() {
         sortResult(SortBy.LOWEST_PRICE_FIRST);
     }
 
+    @Step("Sort results by: {sortBy}")
     private void sortResult(SortBy sortBy) {
         getSortButton(sortBy).shouldBe(visible).click();
     }
@@ -45,20 +47,18 @@ public class SearchResultPage extends BasePage {
      * @param elements The collection to check and wait for
      * @return Updated collection after scrolling
      */
+    @Step("Scroll until minimum {MIN_REQUIRED_ELEMENTS} elements are loaded")
     private ElementsCollection scrollUntilEnoughElements(ElementsCollection elements) {
-        int attempt = 0;
-        int lastSize = elements.size();
+        new SelenideWait(WebDriverRunner.getWebDriver(), Constants.SCROLL_TIMEOUT.toMillis(), Constants.SCROLL_TIMEOUT.toMillis() / 2)
+                .until(driver -> {
+                    if (elements.size() < MIN_REQUIRED_ELEMENTS) {
+                        DriverUtils.pageDown();
+                        return false;
+                    }
+                    return true;
+                });
 
-        while (elements.size() < MIN_REQUIRED_ELEMENTS && attempt < Constants.MAX_SCROLL_ATTEMPTS) {
-            DriverUtils.pageDown();
-            attempt++;
-            elements.shouldHave(CollectionCondition.sizeGreaterThanOrEqual(lastSize + 1), Constants.SCROLL_TIMEOUT);
-            elements = getDestinationElements();
-            lastSize = elements.size();
-        }
-
-        elements.shouldHave(CollectionCondition.sizeGreaterThanOrEqual(MIN_REQUIRED_ELEMENTS));
-        return elements;
+        return elements.shouldHave(CollectionCondition.sizeGreaterThanOrEqual(MIN_REQUIRED_ELEMENTS));
     }
 
     /**
@@ -67,42 +67,25 @@ public class SearchResultPage extends BasePage {
      * @param priceElements Collection of price elements
      * @return List of parsed price values
      */
+    @Step("Extract price values from elements")
     private List<Double> extractPrices(ElementsCollection priceElements) {
-        List<Double> prices = new ArrayList<>();
-        for (int i = 0; i < MIN_REQUIRED_ELEMENTS; i++) {
-            String priceText = priceElements.get(i)
-                    .shouldBe(visible)
-                    .getText()
-                    .replaceAll("[^\\d.]+", "");
-            if (!priceText.isEmpty()) {
-                prices.add(Double.parseDouble(priceText));
-            }
-        }
-        return prices;
-    }
-
-    /**
-     * Checks if the list is sorted in ascending order
-     *
-     * @param prices List of prices to check
-     * @throws AssertionError if prices are not sorted from lowest to highest
-     */
-    private void checkPricesAreSorted(List<Double> prices) {
-        List<Double> sorted = new ArrayList<>(prices);
-        Collections.sort(sorted);
-        if (!prices.equals(sorted)) {
-            throw new AssertionError("Prices are not sorted from lowest to highest: " + prices);
-        }
+        return priceElements.stream()
+                .limit(MIN_REQUIRED_ELEMENTS)
+                .map(element -> element.shouldBe(visible).getText().replaceAll("[^\\d.]+", ""))
+                .filter(priceText -> !priceText.isEmpty())
+                .map(Double::parseDouble)
+                .collect(Collectors.toList());
     }
 
     /**
      * Checks if the search results are sorted by lowest price.
      * It verifies that the first 5 prices are sorted from lowest to highest.
      */
+    @Step("Verify that search results are sorted by lowest price")
     public void checkResultSortByLowestPrice() {
         ElementsCollection priceElements = scrollUntilEnoughElements(getPriceElements());
         List<Double> prices = extractPrices(priceElements);
-        checkPricesAreSorted(prices);
+        AssertionUtils.assertSortedAscending(prices);
     }
 
     /**
@@ -111,6 +94,7 @@ public class SearchResultPage extends BasePage {
      * @param destinations Collection of destination elements to verify
      * @param expectedDestination Expected destination text
      */
+    @Step("Check if destinations match expected value: {expectedDestination}")
     private void checkDestinations(ElementsCollection destinations, String expectedDestination) {
         for (int i = 0; i < MIN_REQUIRED_ELEMENTS; i++) {
             destinations.get(i)
@@ -124,6 +108,7 @@ public class SearchResultPage extends BasePage {
      *
      * @param destination The destination to check in the search results.
      */
+    @Step("Verify search results display correct destination: {destination}")
     public void checkResultDestination(String destination) {
         ElementsCollection destinations = scrollUntilEnoughElements(getDestinationElements());
         checkDestinations(destinations, destination);

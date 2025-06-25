@@ -1,17 +1,16 @@
 package pages.agoda;
 
+import com.codeborne.selenide.*;
 import common.Constants;
 import data.SortBy;
+import models.FilterInfo;
 import utils.AssertionUtils;
 import io.qameta.allure.Step;
 
 import static com.codeborne.selenide.Selenide.*;
 import static com.codeborne.selenide.Condition.*;
-import com.codeborne.selenide.CollectionCondition;
-import com.codeborne.selenide.ElementsCollection;
-import com.codeborne.selenide.SelenideElement;
-import com.codeborne.selenide.SelenideWait;
-import com.codeborne.selenide.WebDriverRunner;
+import static org.assertj.core.api.Assertions.*;
+
 import driver.DriverUtils;
 import lombok.Getter;
 import pages.BasePage;
@@ -25,9 +24,16 @@ public class SearchResultPage extends BasePage {
 
     private final ElementsCollection priceElements = $$("li[data-selenium='hotel-item'] div[data-element-name='final-price'] span:last-child");
     private final ElementsCollection destinationElements = $$("div[data-selenium='area-city'] span");
+    private final ElementsCollection ratingElements = $$("div[data-testid='rating-container']");
+    private final SelenideElement minimumPriceBoxElement = $("#SideBarLocationFilters #price_box_0");
+    private final SelenideElement maximumPriceBoxElement = $("#SideBarLocationFilters #price_box_1");
 
     private SelenideElement getSortButton(SortBy sortBy) {
         return $x(String.format("//button[@data-element-name='%s']", sortBy.getDataElementName()));
+    }
+
+    private SelenideElement getStarRatingCheckbox(int starRating) {
+        return $x(String.format("//legend[@id='filter-menu-StarRatingWithLuxury']/following-sibling::ul//label[@data-element-value=%d]//input", starRating));
     }
 
     @Step("Click sort button to sort results by lowest price")
@@ -113,5 +119,59 @@ public class SearchResultPage extends BasePage {
         ElementsCollection destinations = scrollUntilEnoughElements(getDestinationElements());
         checkDestinations(destinations, destination);
         DriverUtils.scrollToTop();
+    }
+
+    /**
+     * Fills the price filter with minimum and maximum price values.
+     *
+     * @param minPrice Minimum price to set in the filter
+     * @param maxPrice Maximum price to set in the filter
+     */
+    @Step("Fill price filter with min: {minPrice} and max: {maxPrice}")
+    public void fillPriceFilter(double minPrice, double maxPrice) {
+        minimumPriceBoxElement.shouldBe(visible).setValue(String.valueOf(minPrice));
+        maximumPriceBoxElement.shouldBe(visible).setValue(String.valueOf(maxPrice)).pressEnter();
+    }
+
+    /**
+     * Selects a star rating checkbox based on the provided star rating.
+     *
+     * @param starRating The star rating to select (1 to 5)
+     */
+    @Step("Select star rating: {starRating}")
+    public void selectStarRatingFilter(int starRating) {
+        getStarRatingCheckbox(starRating).shouldBe(visible).click();
+    }
+
+    /**
+     * Filters search results based on the provided filter information.
+     * It fills the price filter and selects the star rating.
+     *
+     * @param filterInfo The filter information containing minimum price, maximum price, and star rating
+     */
+    @Step("Filter search results with provided filter information")
+    public void filterSearchResults(FilterInfo filterInfo) {
+        fillPriceFilter(filterInfo.getMinimumPrice(), filterInfo.getMaximumPrice());
+        selectStarRatingFilter(filterInfo.getStarRating());
+    }
+
+    @Step("Check filtered results based on provided filter information")
+    public void checkResultFiltered(FilterInfo filterInfo) {
+        ElementsCollection priceElements = scrollUntilEnoughElements(getPriceElements());
+        List<Double> prices = extractPrices(priceElements);
+
+        for (Double price : prices) {
+            assertThat(price).isBetween(filterInfo.getMinimumPrice(), filterInfo.getMaximumPrice());
+        }
+
+        for (SelenideElement ratingElement : getRatingElements()) {
+            int count = ratingElement.$$("svg").size();
+            assertThat(count).isLessThanOrEqualTo(filterInfo.getStarRating());
+        }
+
+    }
+
+    public void removeFilter() {
+
     }
 }
